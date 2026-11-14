@@ -1,0 +1,463 @@
+/* EUROFRONT — карта-стратегия: бумага, цветные государства, пиксельная подпися */
+
+/* пиксельный шрифт Handjet — локально, без CDN (переменный 400..700) */
+@font-face {
+    font-family: 'Handjet';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url(fonts/handjet/cyrillic.woff2) format('woff2');
+    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
+}
+@font-face {
+    font-family: 'Handjet';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url(fonts/handjet/cyrillic-ext.woff2) format('woff2');
+    unicode-range: U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
+}
+@font-face {
+    font-family: 'Handjet';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url(fonts/handjet/greek.woff2) format('woff2');
+    unicode-range: U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF;
+}
+@font-face {
+    font-family: 'Handjet';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url(fonts/handjet/latin-ext.woff2) format('woff2');
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+    font-family: 'Handjet';
+    font-style: normal;
+    font-weight: 400 700;
+    font-display: block;
+    src: url(fonts/handjet/latin.woff2) format('woff2');
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+:root {
+    color-scheme: dark;
+    --bg: #9fb0ad;
+    --panel: rgba(14, 14, 15, .94);
+    --panel-solid: #121213;
+    --raise: #1d1d1f;
+    --line: rgba(255, 255, 255, .09);
+    --line-2: rgba(255, 255, 255, .17);
+    --line-3: rgba(255, 255, 255, .36);
+    --text: #f5f5f6;
+    --text-2: #c8c8cb;
+    --dim: #96969a;
+    --gold: #e8bf78;
+    --live: #79dfb0;
+    --danger: #ff818c;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --title: 'Handjet', 'Segoe UI', sans-serif;
+    --pixel: 'Handjet', Consolas, monospace;
+    --ease: cubic-bezier(.2, .75, .25, 1);
+    --z-hud: 1200;
+    --z-boot: 5000;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 13px;
+    line-height: 1.45;
+    user-select: none;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+}
+body { position: fixed; inset: 0; }
+button { font: inherit; color: inherit; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+#map { position: fixed; inset: 0; z-index: 1; }
+.maplibregl-canvas { outline: none; }
+
+/* подписи населёнки и стран — поверх холста карты, под HUD */
+#ef-places {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* ---------- свободные плавающие элементы (без панелей-оболочек) ---------- */
+
+.hud-chip {
+    background: linear-gradient(155deg, #262628, #101011 46%, #050506);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-top-color: rgba(255, 255, 255, .26);
+    border-bottom-color: rgba(255, 255, 255, .06);
+    border-radius: 12px;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+
+#brand {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    left: max(16px, env(safe-area-inset-left));
+    z-index: calc(var(--z-hud) + 3);
+    padding: 10px 16px 9px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    pointer-events: none;
+}
+#brand b {
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 21px;
+    letter-spacing: .15em;
+}
+#brand small {
+    font-family: var(--pixel);
+    font-size: 12px;
+    letter-spacing: .18em;
+    color: var(--dim);
+}
+
+#controls {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: max(16px, env(safe-area-inset-right));
+    /* постоянный инструмент важнее панелей: HUD войны центрирован и на узких
+       окнах надвигается на переключатель подложек */
+    z-index: calc(var(--z-hud) + 4);
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.hud-btn, .seg button, .nav-btn {
+    background: linear-gradient(155deg, #262628, #101011 46%, #050506);
+    border: 1px solid rgba(255, 255, 255, .14);
+    border-top-color: rgba(255, 255, 255, .26);
+    border-bottom-color: rgba(255, 255, 255, .06);
+    color: var(--text-2);
+    cursor: pointer;
+    transition: color .18s var(--ease), border-color .18s var(--ease), background .18s var(--ease), transform .12s var(--ease);
+}
+.hud-btn:hover, .seg button:hover, .nav-btn:hover { color: var(--text); border-color: var(--line-3); }
+.hud-btn:active, .seg button:active, .nav-btn:active { transform: scale(.96); }
+
+.hud-btn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 14px;
+    min-height: 40px;
+    border-radius: 12px;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 13px;
+    letter-spacing: .1em;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.hud-btn .ico { font-size: 14px; line-height: 1; }
+.hud-btn.active { color: var(--gold); border-color: rgba(232, 191, 120, .45); }
+.hud-btn.active .ico { color: var(--gold); }
+
+/* объявить войну — это действие, а не переключатель: горячий акцент, чтобы не
+   путалось с РЕЛЬЕФ/3D/ЗВУК рядом */
+.hud-btn.action { color: #ffd9c8; border-color: rgba(200, 76, 50, .5); }
+.hud-btn.action .ico { color: #ff8b7a; font-size: 15px; }
+.hud-btn.action:hover { color: #fff; border-color: rgba(255, 139, 122, .8); }
+
+.seg {
+    display: flex;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .45);
+}
+.seg button {
+    border-radius: 0;
+    border-right-width: 0;
+    padding: 0 13px;
+    min-height: 40px;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 12.5px;
+    letter-spacing: .09em;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+.seg button:first-child { border-radius: 12px 0 0 12px; }
+.seg button:last-child { border-radius: 0 12px 12px 0; border-right-width: 1px; }
+.seg button.active { color: var(--gold); background: linear-gradient(155deg, #2e2a22, #17140e 55%, #0a0906); }
+
+/* ---------- правый стек навигации ---------- */
+
+#navstack {
+    position: fixed;
+    right: max(16px, env(safe-area-inset-right));
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: var(--z-hud);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.nav-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1;
+    box-shadow: 0 18px 44px rgba(0, 0, 0, .6), 0 4px 14px rgba(0, 0, 0, .45), inset 0 1px 0 rgba(255, 255, 255, .1);
+}
+#nav-compass { color: var(--text-2); }
+#nav-compass svg { transition: transform .2s var(--ease); }
+
+/* ---------- нижняя строка показаний ---------- */
+
+#readout {
+    position: fixed;
+    left: max(16px, env(safe-area-inset-left));
+    bottom: max(14px, env(safe-area-inset-bottom));
+    z-index: var(--z-hud);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px;
+    font-family: var(--pixel);
+    font-size: 14px;
+    letter-spacing: .1em;
+    color: var(--text-2);
+    pointer-events: none;
+}
+.ro-div { width: 1px; height: 12px; background: var(--line-2); }
+#ro-mode { color: var(--dim); }
+#readout.is3d #ro-mode { color: var(--gold); }
+
+/* ---------- атрибуция и масштаб в языке темы ---------- */
+
+.maplibregl-ctrl-attrib {
+    background: rgba(10, 10, 11, .82) !important;
+    border: 1px solid var(--line);
+    border-radius: 8px 0 0 0;
+    font-family: var(--font);
+    font-size: 10px;
+    padding: 3px 8px;
+}
+.maplibregl-ctrl-attrib a { color: var(--dim) !important; }
+.maplibregl-ctrl-attrib a:hover { color: var(--text-2) !important; }
+.maplibregl-ctrl-attrib-button {
+    background-color: rgba(10, 10, 11, .82) !important;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+}
+.maplibregl-ctrl-scale {
+    background: rgba(10, 10, 11, .82) !important;
+    border: 1px solid var(--line-2) !important;
+    border-top: none !important;
+    border-radius: 0 0 6px 6px;
+    color: var(--text-2) !important;
+    font-family: var(--pixel);
+    font-size: 12px;
+    letter-spacing: .08em;
+    padding: 2px 8px 3px;
+}
+.maplibregl-ctrl-bottom-left { left: max(16px, env(safe-area-inset-left)); bottom: max(52px, calc(env(safe-area-inset-bottom) + 44px)); }
+.maplibregl-ctrl-bottom-right { right: max(16px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+
+/* ---------- стартовая завіса ---------- */
+
+#boot {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-boot);
+    background:
+        radial-gradient(ellipse 90% 70% at 50% 42%, rgba(38, 42, 52, .5), transparent 70%),
+        linear-gradient(180deg, #0a0c10, #050506);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .5s var(--ease);
+}
+#boot.off { opacity: 0; pointer-events: none; }
+.boot-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px; }
+.boot-brand {
+    display: flex;
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: clamp(34px, 7.5vw, 60px);
+    letter-spacing: .2em;
+    color: var(--text);
+}
+.boot-brand span { animation: boot-in .7s var(--ease) both; }
+.boot-brand span:nth-child(1) { animation-delay: .02s; }
+.boot-brand span:nth-child(2) { animation-delay: .06s; }
+.boot-brand span:nth-child(3) { animation-delay: .10s; }
+.boot-brand span:nth-child(4) { animation-delay: .14s; }
+.boot-brand span:nth-child(5) { animation-delay: .18s; }
+.boot-brand span:nth-child(6) { animation-delay: .22s; }
+.boot-brand span:nth-child(7) { animation-delay: .26s; }
+.boot-brand span:nth-child(8) { animation-delay: .30s; }
+.boot-brand span:nth-child(9) { animation-delay: .34s; }
+@keyframes boot-in {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: none; }
+}
+.boot-sub {
+    font-family: var(--pixel);
+    font-size: 15px;
+    letter-spacing: .3em;
+    color: var(--dim);
+}
+.boot-meter { width: min(320px, 72vw); margin-top: 18px; }
+.boot-meta {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--pixel);
+    font-size: 13px;
+    letter-spacing: .16em;
+    color: var(--text-2);
+    margin-bottom: 7px;
+}
+#boot-pct { color: var(--gold); }
+.boot-bar {
+    height: 3px;
+    background: var(--raise);
+    border-radius: 2px;
+    overflow: hidden;
+}
+#boot-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #8a6d3f, var(--gold));
+    border-radius: 2px;
+    transition: width .3s var(--ease);
+}
+
+/* ---------- экран сбоя ---------- */
+
+#fatal {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-boot);
+    background: rgba(5, 5, 6, .92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.fatal-box {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 28px 34px;
+    text-align: center;
+    background: var(--panel-solid);
+    border: 1px solid var(--line-2);
+    border-radius: 14px;
+    max-width: min(420px, 86vw);
+}
+.fatal-box b { font-family: var(--title); letter-spacing: .18em; color: var(--danger); }
+.fatal-box span { color: var(--text-2); }
+.fatal-box button {
+    margin-top: 6px;
+    padding: 10px 22px;
+    border-radius: 10px;
+    border: 1px solid var(--line-3);
+    background: var(--raise);
+    font-family: var(--title);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: .14em;
+    cursor: pointer;
+}
+.fatal-box button:hover { border-color: var(--gold); color: var(--gold); }
+
+/* ---------- легенда знаков: свободная карточка, не панель инструментов ---------- */
+#legend {
+    position: fixed;
+    top: 86px; left: max(16px, env(safe-area-inset-left));
+    z-index: calc(var(--z-hud) + 2);
+    width: 236px;
+    max-height: calc(100vh - 130px);
+    overflow-y: auto;
+    padding: 10px 12px 12px;
+    background: linear-gradient(160deg, rgba(26, 23, 18, .96), rgba(12, 11, 9, .96));
+    border: 1px solid var(--line-2); border-top-color: var(--line-3);
+    border-radius: 12px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .07);
+    backdrop-filter: blur(8px);
+    scrollbar-width: thin;
+    scrollbar-color: #6b5a3a rgba(255, 255, 255, .05);
+}
+#legend::-webkit-scrollbar { width: 8px; }
+#legend::-webkit-scrollbar-track { background: rgba(255, 255, 255, .05); border-radius: 4px; }
+#legend::-webkit-scrollbar-thumb { background: #6b5a3a; border-radius: 4px; border: 2px solid rgba(12, 11, 9, .9); }
+#legend::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+.lg-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 7px; font-family: var(--title); font-size: 11px; letter-spacing: .16em; color: var(--gold); }
+.lg-x { background: none; border: none; padding: 0 2px; cursor: pointer; color: var(--dim); font-size: 15px; line-height: 1; }
+.lg-x:hover { color: var(--text); }
+.lg-row { display: flex; align-items: center; gap: 9px; padding: 3px 0; font-family: var(--title); font-size: 10px; letter-spacing: .08em; color: var(--text-2); }
+.lg-row svg { flex: 0 0 auto; }
+.lg-sep { height: 1px; margin: 6px 0; background: var(--line); }
+
+/* ---------- мобильная раскладка ---------- */
+
+@media (max-width: 700px) {
+    #brand { padding: 8px 12px 7px; }
+    #brand b { font-size: 17px; letter-spacing: .14em; }
+    #brand small { display: none; }
+    #controls { gap: 6px; }
+    .hud-btn { min-height: 38px; padding: 0 11px; font-size: 11.5px; gap: 5px; }
+    .hud-btn .ico { font-size: 12px; }
+    .seg button { min-height: 38px; padding: 0 10px; font-size: 11px; }
+    .nav-btn { width: 40px; height: 40px; }
+    #readout { font-size: 12px; gap: 8px; padding: 6px 11px; }
+    .maplibregl-ctrl-scale { display: none; }
+    #legend { top: 64px; left: 10px; width: 206px; max-height: calc(100vh - 250px); }
+    .lg-row { font-size: 9px; gap: 7px; }
+}
+
+/* пять кнопок рельса с подписями не помещаются рядом с брендом уже на 640px:
+   раньше порог был 480 и на планшете рельс наезжал на EUROFRONT */
+@media (max-width: 640px) {
+    .hud-btn span:not(.ico) { display: none; }
+    .hud-btn { padding: 0 12px; }
+    .hud-btn .ico { font-size: 15px; }
+}
+
+@media (max-width: 480px) {
+    #brand { padding: 7px 10px 6px; }
+    #brand b { font-size: 14px; letter-spacing: .1em; }
+    #brand small { display: none; }
+    .seg button { padding: 0 8px; font-size: 10px; letter-spacing: .05em; }
+    #ro-coords { display: none; }
+    #readout .ro-div:first-of-type { display: none; }
+}
+
+@media (max-width: 340px) {
+    #brand { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .boot-brand span { animation: none; }
+    * { transition-duration: .01s !important; }
+}
